@@ -1,0 +1,17 @@
+{
+  "name": "Focus+",
+  "short_name": "Focus+",
+  "description": "Offline productivity app with Pomodoro timer, recurring checklists, and completion calendar.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f3ef",
+  "theme_color": "#ba4949",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "focusplus_icon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

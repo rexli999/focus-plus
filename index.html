@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ba4949">
+  <title>Focus+</title>
+  <link rel="icon" href="focusplus_icon.ico">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-menu">
+        <button id="app-menu-button" class="brand brand-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="app-menu-panel">
+          <span class="brand-dot"></span>
+          <span>Focus+</span>
+          <span class="brand-caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <div id="app-menu-panel" class="app-menu-panel" role="menu" hidden>
+          <div class="app-menu-section">
+            <button id="menu-timer-settings-btn" class="app-menu-item" type="button" role="menuitem">Timer Settings</button>
+            <button id="menu-edit-daily-btn" class="app-menu-item" type="button" role="menuitem">Edit Daily Templates</button>
+            <button id="menu-edit-weekly-btn" class="app-menu-item" type="button" role="menuitem">Edit Weekly Templates</button>
+          </div>
+          <div class="app-menu-section">
+            <label class="font-size-control" for="menu-font-size">
+              <span>Font Size</span>
+              <input id="menu-font-size" type="range" min="0" max="2" step="1" value="0" aria-label="Font size">
+            </label>
+            <div class="font-size-labels" aria-hidden="true">
+              <span>Small</span>
+              <span>Medium</span>
+              <span>Large</span>
+            </div>
+            <label class="font-size-control" for="menu-sound-volume">
+              <span>Sound Volume</span>
+              <input id="menu-sound-volume" type="range" min="0" max="100" step="1" value="100" aria-label="Sound volume">
+            </label>
+            <div class="font-size-labels" aria-hidden="true">
+              <span>Mute</span>
+              <span>50%</span>
+              <span>100%</span>
+            </div>
+            <p class="menu-note">Edit <code>sound-config.js</code> to change each button sound and its volume.</p>
+          </div>
+          <div class="app-menu-section">
+            <label class="switch-row menu-switch-row">
+              <span>Auto Backup</span>
+              <input type="checkbox" id="setting-auto-backup">
+            </label>
+            <div id="backup-controls" hidden>
+              <button id="choose-backup-folder-btn" class="app-menu-item" type="button" role="menuitem">Choose Data Folder</button>
+              <p id="backup-status" class="menu-note"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav class="tabs" aria-label="Primary navigation">
+        <button class="tab-btn is-active" data-page="focus" type="button">Focus</button>
+        <button class="tab-btn" data-page="calendar" type="button">Calendar</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page is-active" id="page-focus" aria-labelledby="focus-title">
+        <h1 id="focus-title" class="sr-only">Pomodoro Focus and Checklists</h1>
+
+        <section class="timer-card" aria-label="Pomodoro timer">
+          <div class="timer-modes" role="tablist" aria-label="Timer mode">
+            <button class="mode-btn is-active" data-mode="focus" type="button">Pomodoro</button>
+            <button class="mode-btn" data-mode="shortBreak" type="button">Short Break</button>
+            <button class="mode-btn" data-mode="longBreak" type="button">Long Break</button>
+          </div>
+          <div class="timer-display" id="timer-display" aria-live="polite">25:00</div>
+          <div class="timer-controls">
+            <button id="start-pause-btn" class="primary-btn" type="button">START</button>
+            <button id="reset-btn" class="ghost-btn" type="button">Reset</button>
+            <button id="skip-btn" class="ghost-btn" type="button">Skip</button>
+          </div>
+          <div class="timer-meta">
+            <p id="cycle-label">Session 1</p>
+          </div>
+          <section id="timer-settings" class="settings-panel" hidden>
+            <div class="settings-grid">
+              <label class="switch-row"><span>Auto-start next session/break</span><input type="checkbox" id="setting-autostart"></label>
+              <label class="switch-row"><span>Sound alerts</span><input type="checkbox" id="setting-sound"></label>
+              <label class="switch-row"><span>Browser notifications</span><input type="checkbox" id="setting-notification"></label>
+            </div>
+            <p class="settings-note" id="notification-note"></p>
+            <div class="settings-actions">
+              <button id="timer-settings-done-btn" class="primary-btn" type="button">Done</button>
+            </div>
+          </section>
+        </section>
+
+        <div class="checklists-grid">
+          <section class="panel" aria-labelledby="daily-checklist-title">
+            <div class="panel-head">
+              <div>
+                <h2 id="daily-checklist-title">Daily Checklist</h2>
+                <p class="panel-subtitle" id="daily-period-label"></p>
+              </div>
+            </div>
+            <ul id="daily-checklist" class="checklist"></ul>
+            <p class="empty-state" id="daily-empty" hidden>No active daily tasks for today.</p>
+          </section>
+
+          <section class="panel" aria-labelledby="weekly-checklist-title">
+            <div class="panel-head">
+              <div>
+                <h2 id="weekly-checklist-title">Weekly Checklist</h2>
+                <p class="panel-subtitle" id="weekly-period-label"></p>
+              </div>
+            </div>
+            <ul id="weekly-checklist" class="checklist"></ul>
+            <p class="empty-state" id="weekly-empty" hidden>No active weekly tasks this week.</p>
+          </section>
+        </div>
+
+        <section class="panel template-editor-wrap" id="template-editor-panel" aria-labelledby="template-editor-title" hidden>
+          <div class="panel-head">
+            <div>
+              <h2 id="template-editor-title">Template Editor</h2>
+              <p class="panel-subtitle" id="template-editor-subtitle">Open a template editor to make changes.</p>
+            </div>
+          </div>
+          <div id="editor-container" hidden>
+            <ul id="editor-list" class="editor-list"></ul>
+            <div class="editor-add-row">
+              <input id="editor-new-input" type="text" maxlength="120" placeholder="Add a new recurring task template">
+              <button id="editor-add-btn" class="ghost-btn" type="button">Add</button>
+            </div>
+            <div class="editor-actions">
+              <button id="editor-cancel-btn" class="ghost-btn" type="button">Cancel</button>
+              <button id="editor-save-btn" class="primary-btn" type="button" disabled>Save Changes</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="page" id="page-calendar" aria-labelledby="calendar-title">
+        <div class="panel calendar-panel">
+          <div class="panel-head">
+            <div>
+              <h1 id="calendar-title">Completion Calendar</h1>
+              <p class="panel-subtitle">Daily color = daily checklist. Sunday badge = weekly checklist.</p>
+            </div>
+            <div class="calendar-nav">
+              <button id="calendar-prev" class="ghost-btn" type="button" aria-label="Previous month">Prev</button>
+              <div id="calendar-month-label" class="calendar-month-label"></div>
+              <button id="calendar-next" class="ghost-btn" type="button" aria-label="Next month">Next</button>
+            </div>
+          </div>
+          <div class="legend">
+            <span><i class="legend-swatch legend-green"></i> All complete</span>
+            <span><i class="legend-swatch legend-yellow"></i> Partial complete</span>
+            <span><i class="legend-swatch legend-red"></i> None complete</span>
+            <span><i class="legend-swatch legend-none"></i> No tasks</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="Completion calendar"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <template id="checklist-item-template">
+    <li class="checklist-item">
+      <label><input type="checkbox"><span class="check-label"></span></label>
+    </li>
+  </template>
+
+  <template id="editor-item-template">
+    <li class="editor-item">
+      <div class="editor-item-main"><input type="text" maxlength="120" class="editor-item-input"></div>
+      <div class="editor-item-controls">
+        <button type="button" class="tiny-btn" data-action="up" aria-label="Move up">&uarr;</button>
+        <button type="button" class="tiny-btn" data-action="down" aria-label="Move down">&darr;</button>
+        <button type="button" class="tiny-btn danger" data-action="remove" aria-label="Remove">&times;</button>
+      </div>
+    </li>
+  </template>
+
+  <script src="sound-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

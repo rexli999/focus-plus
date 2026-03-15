@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+
+# Local runtime/app data
+focusplus_state.json
+focusplus_state.before_restore.json
+focusplus_state.default_overwrite_snapshot.json
+
+# Browser-picked backup exports
+FocusPlus_Data/
