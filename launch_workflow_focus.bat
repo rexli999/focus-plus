@@ -5,6 +5,8 @@ cd /d "%~dp0"
 set "APP_URL=http://localhost:8000/"
 set "HEALTH_URL=http://localhost:8000/api/state"
 set "PYTHON_CMD="
+set "BROWSER_CMD="
+set "APP_PROFILE_DIR=%LOCALAPPDATA%\FocusPlus\chrome-profile"
 
 where python >nul 2>&1
 if not errorlevel 1 set "PYTHON_CMD=python"
@@ -20,6 +22,12 @@ if not defined PYTHON_CMD (
   exit /b 1
 )
 
+if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
+  set "BROWSER_CMD=C:\Program Files\Google\Chrome\Application\chrome.exe"
+) else if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" (
+  set "BROWSER_CMD=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+)
+
 set "SERVER_OK="
 powershell -NoProfile -Command ^
   "try { Invoke-WebRequest -Uri '%HEALTH_URL%' -UseBasicParsing -TimeoutSec 1 | Out-Null; exit 0 } catch { exit 1 }"
@@ -30,6 +38,11 @@ if not defined SERVER_OK (
   timeout /t 2 >nul
 )
 
-start "" "%APP_URL%"
+if defined BROWSER_CMD (
+  if not exist "%APP_PROFILE_DIR%" mkdir "%APP_PROFILE_DIR%" >nul 2>&1
+  start "" "%BROWSER_CMD%" --user-data-dir="%APP_PROFILE_DIR%" --app="%APP_URL%"
+) else (
+  start "" "%APP_URL%"
+)
 
 endlocal

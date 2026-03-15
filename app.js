@@ -4,6 +4,9 @@
   var STORAGE_KEY = "workflow-focus-state-v1";
   var APP_VERSION = "20260315-cleanup-1";
   var SHARED_STATE_API = "./api/state";
+  var INITIAL_SERVER_RETRY_MS = 6000;
+  var INITIAL_SERVER_RETRY_INTERVAL_MS = 250;
+  var SERVER_RESYNC_INTERVAL_MS = 2000;
   var DEFAULT_DURATIONS = { focus: 25, shortBreak: 5, longBreak: 15 };
   var MODE_SEQUENCE = ["focus", "shortBreak", "focus", "shortBreak", "focus", "shortBreak", "focus", "longBreak"];
   var DEFAULT_SOUND_CONFIG = {
@@ -116,7 +119,10 @@
     ready: false,
     writeInFlight: false,
     queuedVersion: 0,
-    queuedPayload: ""
+    queuedPayload: "",
+    awaitingServerSync: false,
+    syncAttemptInFlight: false,
+    lastSyncAttemptAt: 0
   };
 
   init();
@@ -159,7 +165,9 @@
 
   function loadInitialState() {
     var localRecord = loadStateFromLocalStorage();
-    return loadStateFromServer().then(function (serverRecord) {
+    var retryWindowMs = INITIAL_SERVER_RETRY_MS;
+    return loadStateFromServerWithRetry(retryWindowMs, INITIAL_SERVER_RETRY_INTERVAL_MS).then(function (serverRecord) {
+      stateSyncRuntime.awaitingServerSync = false;
       if (serverRecord.exists) {
         writeStateToLocalStorage(serverRecord.state);
         return serverRecord.state;
@@ -178,11 +186,29 @@
       return freshState;
     }).catch(function (error) {
       console.warn("Shared state load failed", error);
+      stateSyncRuntime.awaitingServerSync = true;
       if (localRecord.exists) return localRecord.state;
       var freshState = createFreshState();
       writeStateToLocalStorage(freshState);
       return freshState;
     });
+  }
+
+  function loadStateFromServerWithRetry(maxWaitMs, intervalMs) {
+    var startedAt = Date.now();
+    var retryIntervalMs = Math.max(50, Number(intervalMs) || INITIAL_SERVER_RETRY_INTERVAL_MS);
+
+    function attempt() {
+      return loadStateFromServer().catch(function (error) {
+        var elapsedMs = Date.now() - startedAt;
+        if (elapsedMs >= maxWaitMs) {
+          throw error;
+        }
+        return delay(Math.min(retryIntervalMs, maxWaitMs - elapsedMs)).then(attempt);
+      });
+    }
+
+    return attempt();
   }
 
   function loadStateFromLocalStorage() {
@@ -211,6 +237,12 @@
         exists: !!(payload && payload.exists && hasStoredStateShape(payload.state)),
         state: normalizeState(payload && payload.state)
       };
+    });
+  }
+
+  function delay(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, Math.max(0, Number(ms) || 0));
     });
   }
 
@@ -391,7 +423,14 @@
       view.calendarMonth = addMonths(view.calendarMonth, 1); renderCalendar();
     });
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) { periodicRefresh(); renderCalendar(); }
+      if (!document.hidden) {
+        periodicRefresh();
+        renderCalendar();
+        maybeRefreshSharedState(true);
+      }
+    });
+    window.addEventListener("focus", function () {
+      maybeRefreshSharedState(true);
     });
     document.addEventListener("click", function () { closeAppMenu(); });
     document.addEventListener("keydown", function (e) {
@@ -959,6 +998,72 @@
       renderChecklists();
       renderCalendar();
     }
+    maybeRefreshSharedState(false);
+  }
+
+  function maybeRefreshSharedState(force) {
+    if (!stateSyncRuntime.ready || stateSyncRuntime.writeInFlight || stateSyncRuntime.syncAttemptInFlight) {
+      return Promise.resolve(false);
+    }
+    if (!stateSyncRuntime.awaitingServerSync && !force) {
+      return Promise.resolve(false);
+    }
+    var now = Date.now();
+    if (!force && now - stateSyncRuntime.lastSyncAttemptAt < SERVER_RESYNC_INTERVAL_MS) {
+      return Promise.resolve(false);
+    }
+
+    stateSyncRuntime.syncAttemptInFlight = true;
+    stateSyncRuntime.lastSyncAttemptAt = now;
+
+    return loadStateFromServer().then(function (serverRecord) {
+      stateSyncRuntime.awaitingServerSync = false;
+      if (serverRecord.exists) {
+        applyStateFromServer(serverRecord.state);
+        return true;
+      }
+      flushQueuedStateWrite();
+      return true;
+    }).catch(function (error) {
+      stateSyncRuntime.awaitingServerSync = true;
+      console.warn("Shared state refresh failed", error);
+      return false;
+    }).finally(function () {
+      stateSyncRuntime.syncAttemptInFlight = false;
+    });
+  }
+
+  function applyStateFromServer(nextState) {
+    var normalizedServerState = normalizeState(nextState);
+    normalizedServerState.settings.backupFolderSelected = !!backupRuntime.dirHandle;
+    normalizedServerState.settings.backupLastSuccessAt = state.settings.backupLastSuccessAt;
+    normalizedServerState.settings.backupLastError = state.settings.backupLastError;
+
+    if (JSON.stringify(normalizedServerState) === JSON.stringify(state)) {
+      try {
+        writeStateToLocalStorage(normalizedServerState);
+      } catch (e) {
+        console.warn("State local cache save failed", e);
+      }
+      return;
+    }
+
+    state = normalizedServerState;
+    syncTimerSessionDay(false);
+    try {
+      writeStateToLocalStorage(state);
+    } catch (e) {
+      console.warn("State local cache save failed", e);
+    }
+    syncSettingsUi();
+    setMode(state.timer.mode, false, true);
+    resetTimer(true);
+    renderTimer();
+    renderChecklists();
+    renderEditor();
+    renderCalendar();
+    updateNotificationNote();
+    syncBackupUi();
   }
 
   function syncTimerSessionDay(persistIfChanged) {
@@ -1318,8 +1423,9 @@
 
   function queueStateWrite() {
     if (!stateSyncRuntime.ready) return;
-    stateSyncRuntime.queuedPayload = JSON.stringify(state);
+    stateSyncRuntime.queuedPayload = buildSharedStatePayload(state);
     stateSyncRuntime.queuedVersion += 1;
+    if (stateSyncRuntime.awaitingServerSync) return;
     if (stateSyncRuntime.writeInFlight) return;
     flushQueuedStateWrite();
   }
@@ -1341,7 +1447,7 @@
   }
 
   function writeStateToServer(nextState) {
-    var payload = typeof nextState === "string" ? nextState : JSON.stringify(nextState);
+    var payload = typeof nextState === "string" ? nextState : buildSharedStatePayload(nextState);
     return fetch(SHARED_STATE_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1351,6 +1457,14 @@
       if (!response.ok) throw new Error("Shared state save failed with status " + response.status + ".");
       return response.json();
     });
+  }
+
+  function buildSharedStatePayload(nextState) {
+    var sharedState = normalizeState(nextState);
+    delete sharedState.settings.backupFolderSelected;
+    delete sharedState.settings.backupLastSuccessAt;
+    delete sharedState.settings.backupLastError;
+    return JSON.stringify(sharedState);
   }
 
   function registerSW() {
