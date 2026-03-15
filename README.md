@@ -95,3 +95,11 @@ git add .
 git commit -m "Initial commit"
 git push -u origin main
 ```
+
+## Attribution
+
+This project was fully coded with OpenAI Codex based on user direction, iteration, and review.
+
+Estimated time spent by the project owner: approximately 4-8 hours across planning, prompting, testing, reviewing, and refinement.
+
+This is an estimate, not a tracked time log.
