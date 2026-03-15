@@ -2,6 +2,15 @@
 
 Focus+ is a local-first productivity app for structured work sessions. It combines a Pomodoro timer, recurring daily and weekly checklists, a completion calendar, configurable sounds, and optional local folder backups in a simple browser-based interface.
 
+## App Overview
+
+Focus+ is organized around two main views:
+
+- Focus view: the Pomodoro timer, daily checklist, weekly checklist, and settings live here.
+- Calendar view: a month grid shows daily completion status and weekly progress markers over time.
+
+The app is designed for personal workflow tracking on a local machine, with state persisted to disk through a lightweight Python server instead of a hosted backend.
+
 ## Timer
 
 The timer is built around a standard Pomodoro flow:
