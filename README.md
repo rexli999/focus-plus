@@ -1,6 +1,8 @@
 # Focus+
 
-Focus+ is a local-first productivity app for structured work sessions. It combines a Pomodoro timer, recurring daily and weekly checklists, a completion calendar, configurable sounds, and optional local folder backups in a simple browser-based interface.
+![Focus+ screenshot](./screenshot.png)
+
+Focus+ is a local-first productivity app for structured work sessions. It combines a Pomodoro timer, recurring daily and weekly checklists, a completion calendar, browser notifications, configurable sounds, optional local folder backups, and offline support in a simple browser-based interface.
 
 ## App Overview
 
@@ -34,12 +36,15 @@ Key timer behavior:
 ## Features
 
 - Pomodoro timer with focus and break cycles
-- Daily recurring checklist templates
-- Weekly recurring checklist templates
-- Completion calendar for daily and weekly progress
-- Configurable sound effects
+- Manual mode switching for Pomodoro, short break, and long break sessions
+- Daily recurring checklist templates with in-app editing
+- Weekly recurring checklist templates with in-app editing
+- Completion calendar for daily and weekly progress tracking
+- Browser notifications for timer completion
+- Configurable sound effects and adjustable master sound volume
+- Adjustable UI font size
 - Shared local state persisted to disk through a small Python server
-- Optional folder-based backup export
+- Optional automatic folder-based backup export
 - Offline support through a service worker
 
 ## Project Structure
@@ -71,35 +76,25 @@ python focusplus_server.py --host localhost --port 8000
 ```
 
 3. Open `http://localhost:8000/`.
+4. Optional: after the app opens in Chrome or Edge, you can create a desktop shortcut or install it as an app from the browser menu for quicker access.
 
 ## Data and Persistence
 
 - App state is stored in `focusplus_state.json`.
 - The Python server serves the frontend and handles reads and writes to `/api/state`.
 - The server sends `Cache-Control: no-store`, while the service worker handles offline caching for static assets.
-- Browser-based backups export app configuration and completion history into a selected folder.
+- Browser-based backups can automatically export app configuration and completion history into a selected folder.
 
 ## Customization
 
 - Update `sound-config.js` to change sound files, aliases, synth fallbacks, and sound gain.
 - Timer durations can be adjusted from the app settings and are persisted in app state.
-- Font size, sound volume, browser notifications, and backup settings are all stored locally.
-
-## GitHub Setup
-
-This project is ready to be published to GitHub as a standard static frontend plus Python utility repo. If you create a new empty repository on GitHub, you can publish this local project with:
-
-```powershell
-git remote add origin <your-github-repo-url>
-git add .
-git commit -m "Initial commit"
-git push -u origin main
-```
+- Font size, sound volume, browser notifications, auto-start, and backup settings are all stored locally.
 
 ## Attribution
 
 This project was fully coded with OpenAI Codex based on user direction, iteration, and review.
 
-Estimated time spent by the project owner: approximately 4-8 hours across planning, prompting, testing, reviewing, and refinement.
+Estimated time spent by the project owner: approximately 8 hours across planning, prompting, testing, reviewing, and refinement.
 
 This is an estimate, not a tracked time log.
